@@ -943,19 +943,6 @@ function addStep(step) {
   var script = builder.getScript();
   var stepName = step.step_name || (script.steps.indexOf(step) + 1) + ".";
   
-  //Create appenders
-  var appendSteps = jQuery.Deferred().done(function(stepNode) {
-    jQuery("#steps").append(stepNode);
-  });
-  var appendStepNode = jQuery.Deferred().done(function(tasksNode, contentNode) {
-    var stepNodeArgs = [
-      'div', {id: step.id, class: 'b-step'}, 
-      tasksNode,
-      contentNode
-    ];
-    appendSteps.resolve(newNode.apply(this, stepNodeArgs));
-  });
-  
   //Create tasks nodes
   var tasksArgs = [
     'span', {id: step.id + '-b-tasks', class: 'b-tasks'},
@@ -965,16 +952,15 @@ function addStep(step) {
       click: function() { editType(step.id); return false; }
     })
   ];
-  for(var i = 0; i < Object.keys(step).length - 4; i++) {
-    tasksArgs.push(function() {
-      var pIdx = i;
-      return newNode('a', newNode('span', 'p' + pIdx, {id: step.id + 'edit-p' + pIdx + '-name'}), {
+  step.getParamNames().forEach(function(paramName, pIdx) {
+    tasksArgs.push(
+      newNode('a', newNode('span', 'p' + pIdx, {id: step.id + 'edit-p' + pIdx + '-name'}), {
         id: step.id + 'edit-p' + pIdx,
         class: 'b-task',
         click: function() { editParam(step.id, pIdx); }
       })
-    }());
-  }
+    );
+  });
   tasksArgs.push(
     newNode('a', _t('step_delete'), {
       id: step.id + 'delete',
@@ -1082,25 +1068,22 @@ function addStep(step) {
       click: function() { editType(step.id); }
     })
   ];
-  for(var j = 0; j < Object.keys(step).length - 4; j++) {
+  step.getParamNames().forEach(function(paramName, pIdx) {
     contentArgs.push(
-      function() {
-        var pIdx = j;
-        return newNode('span', {id: step.id + '-p' + pIdx},
-          newNode('a', {
-            id: step.id + '-p' + pIdx + '-name',
-            class:'b-param-type',
-            click: function() { editParam(step.id, pIdx); }
-          }),
-          newNode('a', '', {
-            id: step.id + '-p' + pIdx + '-value',
-            class:'b-param',
-            click: function() { editParam(step.id, pIdx); }
-          })
-        )
-      }()
+      newNode('span', {id: step.id + '-p' + pIdx},
+        newNode('a', {
+          id: step.id + '-p' + pIdx + '-name',
+          class:'b-param-type',
+          click: function() { editParam(step.id, pIdx); }
+        }),
+        newNode('a', '', {
+          id: step.id + '-p' + pIdx + '-value',
+          class:'b-param',
+          click: function() { editParam(step.id, pIdx); }
+        })
+      )
     );
-  }
+  });
   contentArgs.push(
     // Message display
     newNode('div', {'class': "b-step-note", 'id': step.id + '-note', style:'display: none'}), 
@@ -1111,14 +1094,17 @@ function addStep(step) {
     newNode('div', _t('playback_not_supported_warning'), {class:"b-step-error", id: step.id + "-unplayable", style:'display: none'})
   );
   
-  //Resolve step appender
-  appendStepNode.resolve(
+  //Build nodes from taskArgs and contentArgs
+  var stepNodeArgs = [
+    'div', {id: step.id, class: 'b-step'}, 
     newNode.apply(this, tasksArgs),
     newNode(
-        'div', {class: 'b-step-content', id: step.id + '-content'},
-        newNode.apply(this, contentArgs)
+      'div', {class: 'b-step-content', id: step.id + '-content'},
+      newNode.apply(this, contentArgs)
     )
-  );
+  ];
+  //Append nodes to screen
+  jQuery("#steps").append(newNode.apply(this, stepNodeArgs));
   
   jQuery('#' + step.id + '-burger').click(function(e) {
     jQuery('.b-tasks').removeClass('b-tasks-appear');
